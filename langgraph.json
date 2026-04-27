@@ -1,0 +1,10 @@
+{
+  "$schema": "https://langgra.ph/schema.json",
+  "python_version": "3.12",
+  "dependencies": ["."],
+  "env": ".env",
+  "graphs": {
+    "lead_agent": "orca.agent.graph:make_lead_agent",
+    "research_agent": "orca.research.subagents.base:make_research_agent"
+  }
+}

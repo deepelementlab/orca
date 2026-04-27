@@ -1,0 +1,37 @@
+# Orca Configuration Example
+research:
+  default_depth: 2
+  max_depth: 5
+  default_max_sources: 10
+  cache_ttl: 3600
+  cache_enabled: true
+  async_execution: true
+  sources:
+    alphaXiv:
+      enabled: true
+      api_key: ${ALPHAXIV_API_KEY}
+    arxiv:
+      enabled: true
+    semantic_scholar:
+      enabled: true
+      base_url: https://api.semanticscholar.org/graph/v1
+    web_search:
+      enabled: true
+      api_key: ${WEB_SEARCH_API_KEY}
+
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins: ["http://localhost:3000"]
+  debug: false
+
+llm:
+  provider: openai
+  model: gpt-4o
+  temperature: 0.7
+  max_tokens: 4096
+  api_key: $OPENAI_API_KEY
+
+skills_dir: skills/public
+prompts_dir: prompts
+log_level: INFO

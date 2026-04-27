@@ -1,0 +1,12 @@
+{
+  "deep-research": {
+    "name": "deep-research",
+    "description": "Deep research workflow",
+    "category": "research"
+  },
+  "lit-review": {
+    "name": "lit-review",
+    "description": "Literature review",
+    "category": "academic"
+  }
+}

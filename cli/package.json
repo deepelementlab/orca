@@ -1,0 +1,17 @@
+{
+  "name": "orca-cli",
+  "version": "0.1.0",
+  "description": "Orca CLI — TypeScript interface to Orca Gateway",
+  "type": "module",
+  "bin": { "orca": "./bin/orca.js" },
+  "scripts": { "build": "tsc", "dev": "tsc --watch" },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}
