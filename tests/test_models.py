@@ -1,5 +1,4 @@
 """Tests for Orca data models."""
-import pytest
 from datetime import datetime
 
 from orca.models.source import Source

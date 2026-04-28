@@ -1,15 +1,18 @@
-"""alphaXiv data source adapter."""
+"""alphaXiv data source adapter with arXiv fallback."""
 from __future__ import annotations
+
 import logging
 from typing import Any, Optional
+
 import httpx
+
 from orca.research.sources.base import BaseSourceAdapter
 
 logger = logging.getLogger(__name__)
 
 
 class AlphaXivSourceAdapter(BaseSourceAdapter):
-    """alphaXiv paper search adapter (alpha version of arXiv with discussions)."""
+    """alphaXiv paper search adapter with arXiv fallback."""
     name = "alphaXiv"
     description = "alphaXiv — Open Research Discussion Platform"
 
@@ -18,8 +21,14 @@ class AlphaXivSourceAdapter(BaseSourceAdapter):
         self.base_url = self.base_url or "https://api.alphaxiv.org/v1"
 
     async def search(self, query: str, max_results: int = 10) -> list[dict[str, Any]]:
-        """Search alphaXiv for papers. Falls back to arXiv if API unavailable."""
-        results = []
+        results = await self._search_alphaXiv(query, max_results)
+        if not results:
+            logger.info("alphaXiv returned no results, falling back to arXiv")
+            results = await self._fallback_arxiv(query, max_results)
+        return results
+
+    async def _search_alphaXiv(self, query: str, max_results: int) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 resp = await client.get(
@@ -29,7 +38,8 @@ class AlphaXivSourceAdapter(BaseSourceAdapter):
                 )
                 if resp.status_code == 200:
                     data = resp.json()
-                    for paper in data.get("papers", data if isinstance(data, list) else []):
+                    papers = data.get("papers", data if isinstance(data, list) else [])
+                    for paper in papers:
                         results.append({
                             "id": f"alphaXiv:{paper.get('paper_id', paper.get('id', ''))}",
                             "title": paper.get("title", ""),
@@ -41,11 +51,19 @@ class AlphaXivSourceAdapter(BaseSourceAdapter):
                             "pdf_url": paper.get("pdf_url"),
                         })
         except Exception as e:
-            logger.warning("alphaXiv search failed (falling back): %s", e)
+            logger.warning("alphaXiv search failed: %s", e)
         return results
 
+    async def _fallback_arxiv(self, query: str, max_results: int) -> list[dict[str, Any]]:
+        try:
+            from orca.research.sources.arxiv import ArxivSourceAdapter
+            fallback = ArxivSourceAdapter(timeout=self.timeout)
+            return await fallback.search(query=query, max_results=max_results)
+        except Exception as e:
+            logger.warning("arXiv fallback also failed: %s", e)
+            return []
+
     async def get_details(self, source_id: str) -> Optional[dict[str, Any]]:
-        """Get paper details from alphaXiv."""
         alpha_id = source_id.replace("alphaXiv:", "")
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:

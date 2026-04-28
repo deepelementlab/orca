@@ -1,5 +1,6 @@
 """Research API router."""
 from __future__ import annotations
+
 import logging
 from typing import Optional
 
@@ -14,12 +15,14 @@ router = APIRouter()
 
 _engine: ResearchEngine | None = None
 
+
 async def get_engine() -> ResearchEngine:
     global _engine
     if _engine is None:
         _engine = ResearchEngine()
         await _engine.initialize()
     return _engine
+
 
 class ResearchRequest(BaseModel):
     workflow: str = Field(..., description="Workflow name")
@@ -28,10 +31,12 @@ class ResearchRequest(BaseModel):
     max_sources: int = Field(default=10, ge=1, le=100)
     output_format: str = Field(default="markdown")
 
+
 class WorkflowResponse(BaseModel):
     name: str
     description: str
     category: str
+
 
 @router.post("/run", response_model=dict)
 async def run_research(req: ResearchRequest):
@@ -42,11 +47,23 @@ async def run_research(req: ResearchRequest):
         max_sources=req.max_sources, output_format=req.output_format)
     return session.to_dict()
 
+
+@router.post("/run/sync", response_model=dict)
+async def run_research_sync(req: ResearchRequest):
+    """Execute a research workflow synchronously."""
+    engine = await get_engine()
+    result = await engine.execute(
+        workflow=req.workflow, query=req.query, depth=req.depth,
+        max_sources=req.max_sources, output_format=req.output_format)
+    return result.to_dict()
+
+
 @router.get("/workflows", response_model=list[WorkflowResponse])
 async def list_workflows():
     """List all available research workflows."""
     engine = await get_engine()
     return engine.list_workflows()
+
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str):
@@ -57,11 +74,13 @@ async def get_session(session_id: str):
         raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
     return session.to_dict()
 
+
 @router.get("/sessions")
 async def list_sessions():
     """List all research sessions."""
     engine = await get_engine()
     return [s.to_dict() for s in engine.list_sessions()]
+
 
 @router.post("/search")
 async def search_sources(query: str, max_results: int = 10, source_type: Optional[str] = None):
@@ -69,3 +88,15 @@ async def search_sources(query: str, max_results: int = 10, source_type: Optiona
     engine = await get_engine()
     results = await engine.search_sources(query=query, source_type=source_type, max_results=max_results)
     return {"query": query, "results": results, "count": len(results)}
+
+
+@router.get("/llm/status")
+async def llm_status():
+    """Check LLM configuration status."""
+    config = OrcaConfig()
+    return {
+        "provider": config.llm.provider,
+        "model": config.llm.model,
+        "configured": bool(config.llm.api_key),
+        "base_url": config.llm.base_url or "default",
+    }

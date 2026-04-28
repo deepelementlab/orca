@@ -2,7 +2,7 @@
 from __future__ import annotations
 import logging
 from typing import Any, Optional
-from orca.research.subagents.base import BaseResearchSubagent
+from orca.research.subagents.base import BaseSubagent as BaseResearchSubagent
 
 logger = logging.getLogger(__name__)
 

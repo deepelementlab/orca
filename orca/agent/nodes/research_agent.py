@@ -1,7 +1,6 @@
 """Research agent node for LangGraph graph."""
 from __future__ import annotations
 import logging
-from typing import Any
 from langchain_core.messages import AIMessage
 from orca.research.engine import ResearchEngine
 

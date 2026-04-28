@@ -63,8 +63,24 @@ def research(ctx, workflow: str, query: str, depth: int, max_sources: int, outpu
 @click.pass_context
 def chat(ctx, query: str):
     """Send a chat query to the Orca agent."""
-    console.print(f"[blue]Query:[/blue] {query}")
-    console.print("[dim]Chat mode requires the Gateway server running. Use 'orca serve' to start it.[/dim]")
+    async def _run():
+        try:
+            from orca.agent.graph import make_lead_agent
+            from langchain_core.messages import HumanMessage
+
+            agent = make_lead_agent()
+            result = await agent.ainvoke({"messages": [HumanMessage(content=query)]})
+            for msg in result.get("messages", []):
+                content = getattr(msg, "content", None)
+                if content and hasattr(msg, "type") and msg.type == "ai":
+                    console.print(Panel(Markdown(content), title="Orca"))
+                    return
+            console.print("[dim]No response generated.[/dim]")
+        except Exception as e:
+            console.print(f"[red]Error:[/red] {e}")
+            console.print("[dim]Chat mode may require LLM configuration. Set ORCA_LLM_API_KEY in config.[/dim]")
+
+    asyncio.run(_run())
 
 @cli.command(name="list-skills")
 @click.pass_context

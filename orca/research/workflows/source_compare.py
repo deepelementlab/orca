@@ -1,17 +1,22 @@
 """Source Compare — multi-source comparative analysis."""
 from __future__ import annotations
+
 import logging
 from typing import Any, Optional
-from orca.models.source import Source
+
 from orca.models.citation import Citation
 from orca.models.research import ResearchResult
+from orca.models.source import Source
 from orca.research.workflows.base import BaseWorkflow
+
 logger = logging.getLogger(__name__)
+
 
 class SourceCompareWorkflow(BaseWorkflow):
     name = "source_compare"
     description = "多来源对比分析"
     category = "analysis"
+    prompt_template = "compare"
 
     async def execute(self, query: str, depth: int = 2, max_sources: int = 10,
                       source_adapters: Optional[dict[str, Any]] = None,
@@ -25,13 +30,25 @@ class SourceCompareWorkflow(BaseWorkflow):
                     by_type.setdefault(st, []).append(r)
             except Exception as e:
                 logger.warning("Source %s: %s", name, e)
+
         all_sources = [s for v in by_type.values() for s in v][:max_sources]
         sources = [Source.from_dict(s) for s in all_sources]
-        summary = f"## Source Comparison: {query}\n\nCompared {len(sources)} sources from {len(by_type)} databases.\n\n### Distribution\n"
+
+        context = self._format_sources_for_context(all_sources)
+        if self._llm:
+            summary = await self._analyze_with_llm(query, context)
+        else:
+            summary = self._build_fallback_summary(query, by_type)
+
+        return ResearchResult(workflow=self.name, query=query, summary=summary,
+                              sources=sources,
+                              citations=[Citation(source_id=s.id, context="Comparison") for s in sources[:5]],
+                              insights=[f"Sources from {len(by_type)} databases compared"],
+                              confidence_score=0.75)
+
+    def _build_fallback_summary(self, query: str, by_type: dict[str, list]) -> str:
+        summary = f"## Source Comparison: {query}\n\nCompared sources from {len(by_type)} databases.\n\n### Distribution\n"
         for st, items in by_type.items():
             summary += f"- **{st}**: {len(items)} results\n"
         summary += "\n### Analysis\n- Cross-source agreement assessed\n- Unique contributions identified\n"
-        return ResearchResult(workflow=self.name, query=query, summary=summary,
-            sources=sources,
-            citations=[Citation(source_id=s.id, context="Comparison") for s in sources[:5]],
-            insights=[f"Sources from {len(by_type)} databases compared"], confidence_score=0.75)
+        return summary

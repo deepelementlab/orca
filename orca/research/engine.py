@@ -17,16 +17,36 @@ class ResearchEngine:
         self._workflows: dict[str, Any] = {}
         self._sessions: dict[str, ResearchSession] = {}
         self._source_adapters: dict[str, Any] = {}
+        self._llm: Any = None
+        self._prompt_loader: Any = None
         self._initialized = False
 
     async def initialize(self) -> None:
         if self._initialized:
             return
         await self._init_sources()
+        self._init_llm()
         self._register_builtin_workflows()
         self._initialized = True
-        logger.info("ResearchEngine initialized: %d workflows, %d sources",
-                     len(self._workflows), len(self._source_adapters))
+        logger.info("ResearchEngine initialized: %d workflows, %d sources, llm=%s",
+                     len(self._workflows), len(self._source_adapters),
+                     "yes" if self._llm else "no")
+
+    def _init_llm(self) -> None:
+        try:
+            from orca.config.orca_config import OrcaConfig
+            from orca.llm.service import LLMService
+            from orca.prompts.loader import PromptLoader
+
+            config = OrcaConfig()
+            self._prompt_loader = PromptLoader(config.prompts_dir)
+            if config.llm.api_key:
+                self._llm = LLMService(config.llm)
+                logger.info("LLM service initialized: model=%s", config.llm.model)
+            else:
+                logger.warning("No LLM API key configured; workflows will use fallback mode")
+        except Exception as e:
+            logger.warning("LLM initialization failed: %s", e)
 
     async def _init_sources(self) -> None:
         from orca.research.sources.arxiv import ArxivSourceAdapter
@@ -34,11 +54,12 @@ class ResearchEngine:
         from orca.research.sources.alpha_xiv import AlphaXivSourceAdapter
         from orca.research.sources.web_search import WebSearchAdapter
         cls_map = {"arxiv": ArxivSourceAdapter, "semantic_scholar": SemanticScholarAdapter,
-                   "web_search": WebSearchAdapter}
+                   "web_search": WebSearchAdapter,
+                   "alphaXiv": AlphaXivSourceAdapter, "alphaxiv": AlphaXivSourceAdapter}
         for name, src_cfg in self.config.sources.items():
             if not src_cfg.enabled:
                 continue
-            cls = cls_map.get(name)
+            cls = cls_map.get(name) or cls_map.get(name.lower()) or cls_map.get(name.lower().replace("xiv", "Xiv"))
             if cls:
                 self._source_adapters[name] = cls(
                     api_key=src_cfg.api_key, base_url=src_cfg.base_url, timeout=src_cfg.timeout)
@@ -57,6 +78,10 @@ class ResearchEngine:
                     SourceCompareWorkflow, PeerReviewWorkflow, PaperWritingWorkflow,
                     ReplicationWorkflow, ELI5Workflow, SessionSearchWorkflow]:
             wf = cls()
+            if self._llm:
+                wf.set_llm(self._llm)
+            if self._prompt_loader:
+                wf.set_prompt_loader(self._prompt_loader)
             self._workflows[wf.name] = wf
 
     def register_workflow(self, name: str, workflow: Any) -> None:
@@ -80,9 +105,13 @@ class ResearchEngine:
                                   error=f"Unknown workflow '{workflow}'. Available: {list(self._workflows.keys())}")
         depth = min(depth or self.config.default_depth, self.config.max_depth)
         max_sources = max_sources or self.config.default_max_sources
-        return await wf.execute(query=query, depth=depth, max_sources=max_sources,
-                                source_adapters=self._source_adapters,
-                                output_format=output_format, **kwargs)
+        try:
+            return await wf.execute(query=query, depth=depth, max_sources=max_sources,
+                                    source_adapters=self._source_adapters,
+                                    output_format=output_format, **kwargs)
+        except Exception as e:
+            logger.error("Workflow '%s' execution failed: %s", workflow, e)
+            return ResearchResult(workflow=workflow, query=query, error=f"Execution error: {e}")
 
     async def execute_async(self, workflow: str, query: str, depth: Optional[int] = None,
                             max_sources: Optional[int] = None, output_format: str = "markdown",

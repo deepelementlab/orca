@@ -1,6 +1,4 @@
 """Tests for Skills market and registry."""
-import pytest
-from pathlib import Path
 
 from orca.skills.market import SkillMarket
 from orca.skills.registry import SkillRegistry

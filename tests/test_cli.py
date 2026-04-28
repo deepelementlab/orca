@@ -23,7 +23,7 @@ class TestPythonCLI:
 
     def test_skills_help(self):
         runner = CliRunner()
-        result = runner.invoke(cli, ["skills", "--help"])
+        result = runner.invoke(cli, ["list-skills", "--help"])
         assert result.exit_code == 0
 
     def test_serve_help(self):

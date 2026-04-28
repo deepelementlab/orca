@@ -1,18 +1,57 @@
 """Base research subagent using LangGraph."""
 from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Optional
-from langchain_core.messages import HumanMessage, SystemMessage
+
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import StateGraph, END
+
 from orca.models.research import ResearchResult
 from orca.research.engine import ResearchEngine
 
 logger = logging.getLogger(__name__)
 
+RESEARCHER_PROMPT = (
+    "You are Orca's evidence-gathering research subagent. Your role:\n"
+    "- Search exhaustively for relevant papers, datasets, and resources\n"
+    "- Prioritize recent and highly-cited sources\n"
+    "- Cross-reference multiple databases (arXiv, Semantic Scholar, alphaXiv)\n"
+    "- Produce structured evidence packages with provenance tracking\n"
+    "- Flag conflicting findings and gaps in the literature\n"
+    "Always provide source URLs and citation information."
+)
+
+REVIEWER_PROMPT = (
+    "You are Orca's AI research reviewer. Your role:\n"
+    "- Assess methodology soundness and experimental rigor\n"
+    "- Evaluate novelty and significance of contributions\n"
+    "- Check statistical validity and reproducibility\n"
+    "- Provide constructive feedback following scholarly review standards\n"
+    "- Rate each dimension on a scale and summarize overall assessment"
+)
+
+WRITER_PROMPT = (
+    "You are Orca's academic writing subagent. Your role:\n"
+    "- Structure papers following IMRaD format (Introduction, Methods, Results, Discussion)\n"
+    "- Write clearly and precisely with proper academic tone\n"
+    "- Incorporate citations naturally with proper attribution\n"
+    "- Generate abstracts that accurately summarize the work\n"
+    "- Ensure logical flow between sections"
+)
+
+VERIFIER_PROMPT = (
+    "You are Orca's verification agent. Your role:\n"
+    "- Fact-check all claims against source material\n"
+    "- Verify citation accuracy and completeness\n"
+    "- Cross-reference statistics and numerical data\n"
+    "- Flag unsubstantiated assertions\n"
+    "- Produce a verification report with confidence scores"
+)
+
 
 class BaseSubagent(ABC):
-    """Base class for research subagents."""
     name: str = "base"
     system_prompt: str = "You are a research assistant."
     description: str = ""
@@ -29,7 +68,7 @@ class BaseSubagent(ABC):
 
 class DeepResearchAgent(BaseSubagent):
     name = "deep_research_agent"
-    system_prompt = "You are a deep research specialist. Conduct thorough multi-round research, synthesize findings, and produce comprehensive reports."
+    system_prompt = RESEARCHER_PROMPT
     description = "深度研究子代理"
 
     async def run(self, query: str, **kwargs: Any) -> ResearchResult:
@@ -40,7 +79,7 @@ class DeepResearchAgent(BaseSubagent):
 
 class LitReviewAgent(BaseSubagent):
     name = "lit_review_agent"
-    system_prompt = "You are a literature review specialist. Organize and synthesize academic papers into structured reviews."
+    system_prompt = RESEARCHER_PROMPT + "\n\nFocus on organizing and synthesizing academic papers into structured reviews."
     description = "文献综述子代理"
 
     async def run(self, query: str, **kwargs: Any) -> ResearchResult:
@@ -51,7 +90,7 @@ class LitReviewAgent(BaseSubagent):
 
 class PeerReviewAgent(BaseSubagent):
     name = "peer_review_agent"
-    system_prompt = "You are a peer review specialist. Provide structured academic peer reviews following scholarly standards."
+    system_prompt = REVIEWER_PROMPT
     description = "同行评审子代理"
 
     async def run(self, query: str, **kwargs: Any) -> ResearchResult:
@@ -62,7 +101,7 @@ class PeerReviewAgent(BaseSubagent):
 
 class PaperWritingAgent(BaseSubagent):
     name = "paper_writing_agent"
-    system_prompt = "You are an academic paper writing specialist. Generate structured paper drafts with proper academic formatting."
+    system_prompt = WRITER_PROMPT
     description = "论文写作子代理"
 
     async def run(self, query: str, **kwargs: Any) -> ResearchResult:
@@ -71,10 +110,7 @@ class PaperWritingAgent(BaseSubagent):
         return await self.engine.execute("paper_writing", query, **kwargs)
 
 
-# Factory for LangGraph
 def make_research_agent():
-    """Create a LangGraph research agent graph."""
-    from orca.agent.state import OrcaAgentState
 
     async def research_node(state: dict) -> dict:
         engine = ResearchEngine()
@@ -82,7 +118,6 @@ def make_research_agent():
         messages = state.get("messages", [])
         query = messages[-1].content if messages else ""
         result = await engine.execute("deep_research", query)
-        from langchain_core.messages import AIMessage
         return {"messages": [AIMessage(content=result.summary)]}
 
     graph = StateGraph(dict)

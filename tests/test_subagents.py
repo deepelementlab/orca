@@ -1,7 +1,7 @@
 """Tests for research subagents."""
 import pytest
 from orca.research.subagents.base import (
-    BaseSubagent, DeepResearchAgent, LitReviewAgent,
+    DeepResearchAgent, LitReviewAgent,
     PeerReviewAgent, PaperWritingAgent, make_research_agent,
 )
 
@@ -11,7 +11,7 @@ class TestSubagentBase:
         agent = DeepResearchAgent()
         assert agent.name == "deep_research_agent"
         assert agent.system_prompt
-        assert "deep research" in agent.system_prompt.lower()
+        assert "research" in agent.system_prompt.lower()
 
     def test_lit_review_agent_properties(self):
         agent = LitReviewAgent()

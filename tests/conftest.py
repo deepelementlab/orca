@@ -23,7 +23,6 @@ def sample_config():
 @pytest.fixture
 def sample_source():
     from orca.models.source import Source
-    from datetime import datetime
     return Source(id="test:1", title="Test Paper", authors=["Author A"],
                   url="https://example.com", source_type="arxiv",
                   abstract="Test abstract", citation_count=42)

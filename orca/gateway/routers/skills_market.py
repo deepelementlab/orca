@@ -1,10 +1,8 @@
 """Skills Market API router."""
 from __future__ import annotations
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from orca.skills.market import SkillMarket
 

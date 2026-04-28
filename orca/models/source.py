@@ -4,6 +4,17 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
+
+def _parse_date(value: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        pass
+    if len(value) == 4 and value.isdigit():
+        return datetime(int(value), 1, 1)
+    return None
+
+
 @dataclass
 class Source:
     """研究来源 (论文、网页、报告等)."""
@@ -30,5 +41,5 @@ class Source:
     def from_dict(cls, data: dict) -> Source:
         d = dict(data)
         if isinstance(d.get("published_date"), str):
-            d["published_date"] = datetime.fromisoformat(d["published_date"])
+            d["published_date"] = _parse_date(d["published_date"])
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})

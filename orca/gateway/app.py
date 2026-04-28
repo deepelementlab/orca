@@ -49,3 +49,6 @@ def create_app(config: OrcaConfig | None = None) -> FastAPI:
         return config.to_dict()
 
     return app
+
+
+app = create_app()

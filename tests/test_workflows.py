@@ -122,6 +122,6 @@ class TestWorkflowExecution:
     @pytest.mark.asyncio
     async def test_error_result_creation(self):
         wf = DeepResearchWorkflow()
-        result = wf._make_error_result("test_wf", "test_q", "test error")
+        result = wf._err("test_wf", "test_q", "test error")
         assert result.error == "test error"
         assert result.workflow == "test_wf"
