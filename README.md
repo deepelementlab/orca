@@ -14,6 +14,8 @@ Whether you are writing a thesis, reviewing literature, auditing a paper, or sim
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
+**简体中文:** [README.zh.md](README.zh.md)
+
 ---
 
 ## 🌟 Why Orca?
