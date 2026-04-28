@@ -14,7 +14,7 @@ Orca 是一款**面向研究者、学生、工程师和终身学习者的 AI 驱
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-**简体中文:** [README.zh.md](README.zh.md)
+**English:** [README.md](README.md)
 
 ---
 
